@@ -16,6 +16,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool showLoginFields = false;
+  String? tiendaCodigo;
 
   void toggleLoginFields() {
     setState(() {
@@ -31,6 +32,20 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       _showMessage("Por favor, ingrese usuario y contraseña");
       return;
     }
+
+    // Validación de usuario con 'osuc'
+    if (username.startsWith('osuc')) {
+      // Extrae los caracteres de la posición 4-6 para el código de tienda
+      tiendaCodigo = '2${username.substring(4, 7)}';
+      // Llama a la función de autenticación
+      await _authenticate(username, password);
+    } else {
+      // Muestra el cuadro de diálogo para ingresar el número de tienda
+      _showTiendaInputDialog(username, password);
+    }
+  }
+
+  Future<void> _authenticate(String username, String password) async {
 
     var loginData = {
       "username": username,
@@ -48,7 +63,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         var data = jsonDecode(response.body);
         if (!data.containsKey('error')) {
           // Lógica para el inicio de sesión exitoso
-          _showMessage("Login Exitoso");
+          _showMessage("Login Exitoso $tiendaCodigo");
           //Navigator.pushNamed(context, '/home');
         } else {
           _showMessage(data['error']);
@@ -60,6 +75,45 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       _showMessage("Error: $e");
       _showMessage("Error de conexión. Intente nuevamente.");
     }
+  }
+
+  void _showTiendaInputDialog(String username, String password) {
+    TextEditingController tiendaController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Ingrese el número de la tienda"),
+          content: TextField(
+            controller: tiendaController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: "Número de tienda (2001-2999)"),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("Cancelar"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text("Aceptar"),
+              onPressed: () {
+                int? tienda = int.tryParse(tiendaController.text);
+                if (tienda != null && tienda >= 2001 && tienda <= 2999) {
+                  tiendaCodigo = tiendaController.text;
+                  Navigator.of(context).pop();
+                  _authenticate(username, password);
+                } else {
+                  _showMessage("Número de tienda no válido. Intente nuevamente.");
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showMessage(String message) {
