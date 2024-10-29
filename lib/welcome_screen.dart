@@ -63,7 +63,6 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         var data = jsonDecode(response.body);
         if (!data.containsKey('error')) {
           // Lógica para el inicio de sesión exitoso
-          _showMessage("Login Exitoso $tiendaCodigo");
           //Navigator.pushNamed(context, '/home');
         } else {
           _showMessage(data['error']);
