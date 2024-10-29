@@ -19,57 +19,46 @@ class WelcomeScreenState extends State<WelcomeScreen> {
 
   void toggleLoginFields() {
     setState(() {
-      showLoginFields = true;
+      showLoginFields = !showLoginFields;
     });
   }
 
   Future<void> _login() async {
     String username = _userController.text.trim();
     String password = _passwordController.text.trim();
-    // ignore: unused_local_variable, no_leading_underscores_for_local_identifiers
-    bool _isLoading = false;
 
-    // Validaciones
     if (username.isEmpty || password.isEmpty) {
-      _showMessage('Por favor, ingresa usuario y contraseña');
+      _showMessage("Por favor, ingrese usuario y contraseña");
       return;
     }
 
-    // JSON para el envío
-    Map<String, String> loginData = {
-      'username': username,
-      'password': password,
+    var loginData = {
+      "username": username,
+      "password": password,
     };
-
-    setState(() {
-      _isLoading = true;
-    });
 
     try {
       final response = await http.post(
         Uri.parse('https://intranetcorporativo.avantetextil.com/Auth/login'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {"Content-Type": "application/json"},
         body: jsonEncode(loginData),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        
-        if (data['success'] == true) {
-          _showMessage('Login exitoso');
-          // Navegar a la siguiente pantalla o realizar otra acción aquí
+        var data = jsonDecode(response.body);
+        if (!data.containsKey('error')) {
+          // Lógica para el inicio de sesión exitoso
+          _showMessage("Login Exitoso");
+          //Navigator.pushNamed(context, '/home');
         } else {
-          _showMessage(data['message'] ?? 'Usuario o contraseña incorrectos');
+          _showMessage(data['error']);
         }
       } else {
-        _showMessage('Error en el servidor');
+        _showMessage("Error en el servidor. Intente nuevamente.");
       }
     } catch (e) {
-      _showMessage('Error al conectar con el servidor');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _showMessage("Error: $e");
+      _showMessage("Error de conexión. Intente nuevamente.");
     }
   }
 
@@ -168,6 +157,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                         child: SizedBox(
                           height: 30,
                           child: TextField(
+                            controller: _userController, // Asignar el controlador
                             textAlign: TextAlign.center,
                             decoration: InputDecoration(
                               hintText: 'Usuario',
@@ -196,7 +186,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                         child: SizedBox(
                           height: 30,
                           child: TextField(
-                            obscureText: true,
+                            controller: _passwordController,
+                            obscureText: false,
                             textAlign: TextAlign.center,
                             decoration: InputDecoration(
                               hintText: 'Contraseña',
