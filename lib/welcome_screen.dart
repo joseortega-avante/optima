@@ -1,7 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hive/hive.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -18,9 +18,31 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   bool showLoginFields = false;
   String? tiendaCodigo;
 
-  void toggleLoginFields() {
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedCredentials();
+  }
+
+  Future<void> _checkSavedCredentials() async {
+    var box = Hive.box('loginBox');
+    String? savedUsername = box.get('username');
+    String? savedPassword = box.get('password');
+    int? loginTimestamp = box.get('login_timestamp');
+
+    if (savedUsername != null && savedPassword != null && loginTimestamp != null) {
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      const sessionDuration = 30 * 60 * 1000; // 30 minutos en milisegundos
+
+      if (currentTime - loginTimestamp < sessionDuration) {
+        // Las credenciales aún son válidas
+        Navigator.pushReplacementNamed(context, '/main_screen');
+        return;
+      }
+    }
+
     setState(() {
-      showLoginFields = !showLoginFields;
+      showLoginFields = false;
     });
   }
 
@@ -32,20 +54,6 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       _showMessage("Por favor, ingrese usuario y contraseña");
       return;
     }
-
-    // Validación de usuario con 'osuc'
-    if (username.startsWith('osuc')) {
-      // Extrae los caracteres de la posición 4-6 para el código de tienda
-      tiendaCodigo = '2${username.substring(4, 7)}';
-      // Llama a la función de autenticación
-      await _authenticate(username, password);
-    } else {
-      // Muestra el cuadro de diálogo para ingresar el número de tienda
-      _showTiendaInputDialog(username, password);
-    }
-  }
-
-  Future<void> _authenticate(String username, String password) async {
 
     var loginData = {
       "username": username,
@@ -62,8 +70,24 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         if (!data.containsKey('error')) {
-          // Lógica para el inicio de sesión exitoso
-          //Navigator.pushNamed(context, '/home');
+          // Guardar las credenciales y el tiempo de autenticación
+          var box = Hive.box('loginBox');
+          await box.put('username', username);
+          await box.put('password', password);
+          await box.put('login_timestamp', DateTime.now().millisecondsSinceEpoch);
+          // Validación de usuario con 'osuc'
+          if (username.startsWith('osuc')) {
+            // Extrae los caracteres de la posición 4-6 para el código de tienda
+            tiendaCodigo = '2${username.substring(4, 7)}';
+            // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/main_screen');
+            }
+          } else {
+            // Muestra el cuadro de diálogo para ingresar el número de tienda
+            _showTiendaInputDialog(username, password);
+            // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
+          }
         } else {
           _showMessage(data['error']);
         }
@@ -102,10 +126,12 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                 int? tienda = int.tryParse(tiendaController.text);
                 if (tienda != null && tienda >= 2001 && tienda <= 2999) {
                   tiendaCodigo = tiendaController.text;
-                  Navigator.of(context).pop();
-                  _authenticate(username, password);
-                } else {
-                  _showMessage("Número de tienda no válido. Intente nuevamente.");
+                  // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
+                  if (mounted) {
+                    Navigator.pushReplacementNamed(context, '/main_screen');
+                  } else {
+                    _showMessage("Número de tienda no válido. Intente nuevamente.");
+                  }
                 }
               },
             ),
@@ -119,6 +145,12 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  void toggleLoginFields() {
+    setState(() {
+      showLoginFields = !showLoginFields;
+    });
   }
 
   @override
