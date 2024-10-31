@@ -37,6 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.4.2
   http: ^1.2.2
+  mobile_scanner: ^6.0.2
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:hive/hive.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -17,34 +17,6 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool showLoginFields = false;
   String? tiendaCodigo;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkSavedCredentials();
-  }
-
-  Future<void> _checkSavedCredentials() async {
-    var box = Hive.box('loginBox');
-    String? savedUsername = box.get('username');
-    String? savedPassword = box.get('password');
-    int? loginTimestamp = box.get('login_timestamp');
-
-    if (savedUsername != null && savedPassword != null && loginTimestamp != null) {
-      final currentTime = DateTime.now().millisecondsSinceEpoch;
-      const sessionDuration = 30 * 60 * 1000; // 30 minutos en milisegundos
-
-      if (currentTime - loginTimestamp < sessionDuration) {
-        // Las credenciales aún son válidas
-        Navigator.pushReplacementNamed(context, '/main_screen');
-        return;
-      }
-    }
-
-    setState(() {
-      showLoginFields = false;
-    });
-  }
 
   Future<void> _login() async {
     String username = _userController.text.trim();
@@ -69,23 +41,26 @@ class WelcomeScreenState extends State<WelcomeScreen> {
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
+        var nombre = data['nombre'];
         if (!data.containsKey('error')) {
-          // Guardar las credenciales y el tiempo de autenticación
-          var box = Hive.box('loginBox');
-          await box.put('username', username);
-          await box.put('password', password);
-          await box.put('login_timestamp', DateTime.now().millisecondsSinceEpoch);
-          // Validación de usuario con 'osuc'
           if (username.startsWith('osuc')) {
             // Extrae los caracteres de la posición 4-6 para el código de tienda
             tiendaCodigo = '2${username.substring(4, 7)}';
             // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
             if (mounted) {
-              Navigator.pushReplacementNamed(context, '/main_screen');
+              Navigator.pushReplacement(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => MainScreen(
+                    nombre: nombre,
+                    tiendaCodigo: tiendaCodigo ?? '',
+                  ),
+                ),
+              );
             }
           } else {
             // Muestra el cuadro de diálogo para ingresar el número de tienda
-            _showTiendaInputDialog(username, password);
+            _showTiendaInputDialog(username, password, nombre);
             // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
           }
         } else {
@@ -100,7 +75,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
-  void _showTiendaInputDialog(String username, String password) {
+  void _showTiendaInputDialog(String username, String password, String nombre) {
     TextEditingController tiendaController = TextEditingController();
 
     showDialog(
@@ -111,7 +86,12 @@ class WelcomeScreenState extends State<WelcomeScreen> {
           content: TextField(
             controller: tiendaController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: "Número de tienda (2001-2999)"),
+            decoration: InputDecoration(
+              hintText: "Número de tienda (2001-2999)",
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+              ),
+            ),
           ),
           actions: <Widget>[
             TextButton(
@@ -128,7 +108,15 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                   tiendaCodigo = tiendaController.text;
                   // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
                   if (mounted) {
-                    Navigator.pushReplacementNamed(context, '/main_screen');
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MainScreen(
+                          nombre: nombre,
+                          tiendaCodigo: tiendaCodigo!,
+                        ),
+                      ),
+                    );
                   } else {
                     _showMessage("Número de tienda no válido. Intente nuevamente.");
                   }
@@ -173,7 +161,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
               children: <Widget>[
                 // Logo
                 Container(
-                  margin: const EdgeInsets.only(top: 250),
+                  margin: const EdgeInsets.only(top: 90),
                   child: Image.asset(
                     'assets/images/logo_content.png',
                   ),
@@ -207,7 +195,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                 else
                   // Botón de "Inicia Sesión"
                   Container(
-                    margin: const EdgeInsets.only(top: 50, bottom: 100),
+                    margin: const EdgeInsets.only(top: 100, bottom: 100),
                     child: ElevatedButton(
                       onPressed: toggleLoginFields,
                       style: ElevatedButton.styleFrom(

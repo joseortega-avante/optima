@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'welcome_screen.dart';
-import 'main_screen.dart';
 import 'dart:io';
 
 class MyHttpOverrides extends HttpOverrides {
@@ -14,8 +12,6 @@ class MyHttpOverrides extends HttpOverrides {
 
 void main() async {
   HttpOverrides.global = MyHttpOverrides();
-  await Hive.initFlutter();
-  await Hive.openBox('loginBox');
   runApp(const MyApp());
 }
 
@@ -29,7 +25,6 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const WelcomeScreen(),
-        '/main_screen': (context) => const MainScreen(),
       },
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
