@@ -38,6 +38,7 @@ dependencies:
   flutter_native_splash: ^2.4.2
   http: ^1.2.2
   mobile_scanner: ^6.0.2
+  flutter_screenutil: ^5.9.3
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +67,7 @@ flutter:
     - assets/images/logo_splash.png
     - assets/images/background.png
     - assets/images/logo_content.png
+    - assets/images/product.png
     - assets/fonts/
   #   - images/a_dot_ham.jpeg
 

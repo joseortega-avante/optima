@@ -1,3 +1,4 @@
+import 'result_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -39,8 +40,13 @@ class MainScreenState extends State<MainScreen> {
               if (barcodes.isNotEmpty) {
                 final String code = barcodes.first.rawValue ?? 'Código no detectado';
                 Navigator.pop(context); // Cierra el escáner después de detectar un código
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Código escaneado: $code')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ResultScreen(
+                       barcodeValue: code,
+                    ),
+                  ),
                 );
               }
             },
@@ -79,10 +85,15 @@ class MainScreenState extends State<MainScreen> {
             ),
             TextButton(
               onPressed: () {
-                setState(() {
-                  codigoIngresado = codigoController.text;
-                });
                 Navigator.of(context).pop(); // Cerrar el diálogo
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ResultScreen(
+                       barcodeValue: '',
+                    ),
+                  ),
+                );
               },
               child: const Text('Aceptar'),
             ),
@@ -206,7 +217,7 @@ class MainScreenState extends State<MainScreen> {
                   padding: const EdgeInsets.only(bottom: 40),
                   child: IconButton(
                     onPressed: () {
-                      // Acción para cerrar sesión
+                      //Logica
                     },
                     icon: const Icon(
                       Icons.logout,
