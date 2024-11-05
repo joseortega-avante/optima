@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -44,9 +45,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         var nombre = data['nombre'];
         if (!data.containsKey('error')) {
           if (username.startsWith('osuc')) {
-            // Extrae los caracteres de la posición 4-6 para el código de tienda
             tiendaCodigo = '2${username.substring(4, 7)}';
-            // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
             if (mounted) {
               Navigator.pushReplacement(
                 context, 
@@ -54,14 +53,14 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                   builder: (context) => MainScreen(
                     nombre: nombre,
                     tiendaCodigo: tiendaCodigo ?? '',
+                    username: username,
+                    password: password,
                   ),
                 ),
               );
             }
           } else {
-            // Muestra el cuadro de diálogo para ingresar el número de tienda
             _showTiendaInputDialog(username, password, nombre);
-            // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
           }
         } else {
           _showMessage(data['error']);
@@ -87,7 +86,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
             controller: tiendaController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              hintText: "Número de tienda (2001-2999)",
+              hintText: "Número de tienda (001-999)",
               hintStyle: TextStyle(
                 color: Colors.grey.shade500,
               ),
@@ -104,9 +103,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
               child: const Text("Aceptar"),
               onPressed: () {
                 int? tienda = int.tryParse(tiendaController.text);
-                if (tienda != null && tienda >= 2001 && tienda <= 2999) {
+                if (tienda != null && tienda >= 001 && tienda <= 999) {
                   tiendaCodigo = tiendaController.text;
-                  // Redirigir a la pantalla principal y evitar regresar a la pantalla de inicio de sesión
                   if (mounted) {
                     Navigator.pushReplacement(
                       context,
@@ -114,6 +112,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                         builder: (context) => MainScreen(
                           nombre: nombre,
                           tiendaCodigo: tiendaCodigo!,
+                          username: username,
+                          password: password,
                         ),
                       ),
                     );
@@ -144,16 +144,16 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Imagen de fondo
           Positioned.fill(
             child: Image.asset(
-              'assets/images/background.png', // Reemplaza con tu imagen de fondo
+              'assets/images/background.png',
               fit: BoxFit.cover,
             ),
           ),
-          // Contenido de la pantalla
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -161,55 +161,54 @@ class WelcomeScreenState extends State<WelcomeScreen> {
               children: <Widget>[
                 // Logo
                 Container(
-                  margin: const EdgeInsets.only(top: 90),
+                  margin: EdgeInsets.only(top: 90.h),
                   child: Image.asset(
                     'assets/images/logo_content.png',
+                    width: 150.w, // Ancho adaptable
+                    height: 100.h, // Alto adaptable
                   ),
                 ),
-                // Texto "Bienvenido!"
-                const SizedBox(height: 20),
-                const Text(
+                SizedBox(height: 15.h),
+                Text(
                   'Bienvenido!',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 30,
+                    fontSize: 30.sp,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Texto "Inicia Sesión en tu Cuenta"
+                SizedBox(height: 20.h),
                 if (showLoginFields)
-                  Container (
-                    margin: const EdgeInsets.only(top: 20, bottom: 30),
-                    child: const Text(
-                        'Inicia Sesión en tu Cuenta',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                          color: Colors.white,
-                        ),
+                  Container(
+                    margin: EdgeInsets.only(top: 20.h, bottom: 30.h),
+                    child: Text(
+                      'Inicia Sesión en tu Cuenta',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18.sp,
+                        color: Colors.white,
                       ),
+                    ),
                   )
                 else
-                  // Botón de "Inicia Sesión"
                   Container(
-                    margin: const EdgeInsets.only(top: 100, bottom: 100),
+                    margin: EdgeInsets.only(top: 100.h, bottom: 100.h),
                     child: ElevatedButton(
                       onPressed: toggleLoginFields,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[700],
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 12.h),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Inicia Sesión',
                         style: TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 20,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.w400,
                           color: Colors.white,
                         ),
@@ -221,108 +220,106 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                     children: [
                       // Campo de usuario
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 100),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        margin: EdgeInsets.symmetric(horizontal: 100.w),
+                        //padding: EdgeInsets.symmetric(horizontal: 10.w),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: SizedBox(
-                          height: 30,
+                          height: 28.h,
                           child: TextField(
-                            controller: _userController, // Asignar el controlador
+                            controller: _userController,
                             textAlign: TextAlign.center,
+                            textAlignVertical: TextAlignVertical.center,
                             decoration: InputDecoration(
                               hintText: 'Usuario',
                               hintStyle: TextStyle(
-                                color: Colors.grey.shade500
+                                color: Colors.grey.shade500,
                               ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.only(bottom: 13)
+                              contentPadding: EdgeInsets.only(bottom: 11.5.h),
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,
-                              fontSize: 13
+                              fontSize: 13.sp,
                             ),
                           ),
                         ),
                       ),
-                      // Campo de contraseña
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        margin: EdgeInsets.symmetric(horizontal: 100.w, vertical: 10.h),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10.r),
                         ),
-                        child: SizedBox(
-                          height: 30,
+                        child: SizedBox (
+                          height: 28.h,
                           child: TextField(
                             controller: _passwordController,
-                            obscureText: false,
+                            obscureText: true,
                             textAlign: TextAlign.center,
+                            textAlignVertical: TextAlignVertical.center,
                             decoration: InputDecoration(
                               hintText: 'Contraseña',
                               hintStyle: TextStyle(
-                                color: Colors.grey.shade500
+                                color: Colors.grey.shade500,
                               ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.only(bottom: 13)
+                              contentPadding: EdgeInsets.symmetric(vertical: 8.5.h),
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,
-                              fontSize: 13,
+                              fontSize: 13.sp,
                             ),
                           ),
                         ),
                       ),
-                      // Botón de iniciar sesión
-                      Container (
-                        margin: const EdgeInsets.only(top: 20),
+                      Container(
+                        margin: EdgeInsets.only(top: 10.h),
                         child: ElevatedButton(
                           onPressed: _login,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey[700],
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Iniciar Sesión',
                             style: TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 14, 
-                              color: Colors.white
-                              ),
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 const Spacer(),
-                // Versión de la aplicación
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 0),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 0.h),
                   child: Text(
                     'Version',
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      fontSize: 16,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w300,
                       color: Colors.white,
                     ),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 30),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 30.h),
                   child: Text(
                     '2 . 0 . 1',
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      fontSize: 16,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w300,
                       color: Colors.white,
                     ),

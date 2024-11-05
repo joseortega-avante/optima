@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:optima/result_screen.dart';
 import 'welcome_screen.dart';
 import 'dart:io';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,7 +22,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(393, 835), // Tamaño base del diseño
+      designSize: const Size(360, 690), // Tamaño base del diseño
       minTextAdapt: true, // Escala automáticamente el tamaño de texto
       builder: (context, child) {
         return MaterialApp(
@@ -31,7 +30,6 @@ class MyApp extends StatelessWidget {
           initialRoute: '/',
           routes: {
             '/': (context) => const WelcomeScreen(),
-            '/result': (context) => const ResultScreen(barcodeValue: ''),
           },
           onUnknownRoute: (settings) {
             return MaterialPageRoute(
