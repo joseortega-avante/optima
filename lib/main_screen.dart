@@ -22,10 +22,17 @@ class MainScreenState extends State<MainScreen> {
   String nombreTienda = '';
   String codigo = '';
   String tiendaNum = '';
-  String precioInicial = '';
-  String precioActual = '';
+  late double precioInicial;
+  late double precioActual;
   String precioPromo = '';
   String descripcion = '';
+  String material = '';
+  String promo = '';
+  String piso = '';
+  String bodega = '';
+  String transito = '';
+  String promoNombre = '';
+  String promoDesc = '';
   String usuario = '';
   String contrasena = '';
 
@@ -94,14 +101,24 @@ class MainScreenState extends State<MainScreen> {
         var data = jsonDecode(response.body);
         
         setState(() {
-          String precioIn = data['precIni']?.toString() ?? '';
-          String precioAc = data['precAct']?.toString() ?? '';
-          String precioCalc = data['calc']?.toString() ?? '';
+          // Verifica y asigna valores predeterminados si están vacíos
+          piso = data['piso']?.endsWith('-') == true ? data['piso']?.substring(0, data['piso'].length - 1) : data['piso'] ?? '';
+          bodega = data['bodega']?.endsWith('-') == true ? data['bodega']?.substring(0, data['bodega'].length - 1) : data['bodega'] ?? '';
+          transito = data['transito']?.endsWith('-') == true ? data['transito']?.substring(0, data['transito'].length - 1) : data['transito'] ?? '';
           
-          precioInicial = precioIn.isNotEmpty ? double.parse(precioIn).toStringAsFixed(2) : '';
-          precioActual = precioAc.isNotEmpty ? double.parse(precioAc).toStringAsFixed(2) : '';
-          precioPromo = precioCalc.isNotEmpty ? double.parse(precioCalc).toStringAsFixed(2) : '';
-          descripcion = data['desc'] ?? '';
+          // Asignación de precios
+          precioInicial = data['precIni'] ?? 0.0;
+          precioActual = data['precAct'] ?? 0.0;
+          
+          // Asignación de valores promocionales con valores predeterminados si están vacíos
+          precioPromo = data['calc']?.isEmpty ?? true ? '' : data['calc'] ?? '';
+          promoNombre = data['promName']?.isEmpty ?? true ? 'N/A' : data['promName'] ?? 'N/A';
+          promoDesc = data['promDesc']?.isEmpty ?? true ? 'N/A' : data['promDesc'] ?? 'N/A';
+
+          // Descripción y material con valores predeterminados si están vacíos
+          descripcion = data['desc'] ?? 'Descripción no disponible';
+          material = data['material'] ?? 'Material no disponible';
+          promo = data['promo']?.isEmpty ?? true ? 'No Hay' : data['promo'] ?? 'No Hay';
         });
 
         _navigateToResultScreen();
@@ -194,6 +211,21 @@ class MainScreenState extends State<MainScreen> {
           ],
         );
       },
+    );
+  }
+
+  void logout() {
+    // Limpiar datos de sesión
+    setState(() {
+      usuario = '';
+      contrasena = '';
+    });
+
+    // Navegar a la pantalla de bienvenida y limpiar el stack de navegación
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      (Route<dynamic> route) => false,
     );
   }
 
@@ -346,18 +378,7 @@ class MainScreenState extends State<MainScreen> {
                   padding: EdgeInsets.only(bottom: 40.h),
                   child: IconButton(
                     onPressed: () {
-                      // Limpiar datos de sesión
-                      setState(() {
-                        usuario = '';
-                        contrasena = '';
-                      });
-
-                      // Navegar a la pantalla de bienvenida y limpiar el stack de navegación
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                        (Route<dynamic> route) => false,
-                      );
+                      logout();
                     },
                     icon: Icon(
                       Icons.logout,
@@ -380,11 +401,17 @@ class MainScreenState extends State<MainScreen> {
       MaterialPageRoute(
         builder: (context) => ResultScreen(
           barcodeValue: codigo,
-          nombreTienda: nombreTienda,
           precioInicial: precioInicial,
           precioActual: precioActual,
           precioPromo: precioPromo,
           descripcion: descripcion,
+          material: material,
+          piso: piso,
+          bodega: bodega,
+          transito: transito,
+          promo: promo,
+          promoNombre: promoNombre,
+          promoDesc: promoDesc,
         ),
       ),
     );

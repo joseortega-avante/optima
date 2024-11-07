@@ -45,7 +45,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         var nombre = data['nombre'];
         if (!data.containsKey('error')) {
           if (username.startsWith('osuc')) {
-            tiendaCodigo = '2${username.substring(4, 7)}';
+            tiendaCodigo = username.substring(4, 7);
+            print(tiendaCodigo);
             if (mounted) {
               Navigator.pushReplacement(
                 context, 
