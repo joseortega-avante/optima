@@ -8,22 +8,22 @@ import 'result_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String nombre;
-  final String tiendaCodigo;
+  final String nombreTienda;
   final String username;
   final String password;
+  final String tiendaCodigo;
 
-  const MainScreen({super.key, required this.nombre, required this.tiendaCodigo, required this.username, required this.password});
+  const MainScreen({super.key, required this.nombre, required this.username, required this.password, required this.nombreTienda, required this.tiendaCodigo});
 
   @override
   MainScreenState createState() => MainScreenState();
 }
 
 class MainScreenState extends State<MainScreen> {
-  String nombreTienda = '';
   String codigo = '';
   String tiendaNum = '';
-  late double precioInicial;
-  late double precioActual;
+  String precioInicial = '';
+  String precioActual = '';
   String precioPromo = '';
   String descripcion = '';
   String material = '';
@@ -36,42 +36,8 @@ class MainScreenState extends State<MainScreen> {
   String usuario = '';
   String contrasena = '';
 
-  // Función para realizar el POST
-  Future<void> fetchStoreName() async {
-    final url = 'https://intranetcorporativo.avantetextil.com/Store/store_name/osuc${widget.tiendaCodigo}';
-
-    try {
-      final response = await http.post(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        // Obtiene la respuesta como JSON
-        final Map<String, dynamic> data = jsonDecode(response.body);
-
-        setState(() {
-          if (data.containsKey('displayname') && data['displayname'] is String) {
-            String displayName = data['displayname'];
-            
-            // Verifica si termina en un número de tres dígitos
-            final regex = RegExp(r'\d{3}$');
-            if (regex.hasMatch(displayName)) {
-              nombreTienda = displayName.substring(0, displayName.length - 3); // Elimina los últimos tres caracteres
-            } else {
-              nombreTienda = displayName; // Almacena el nombre sin cambios
-            }
-          } else {
-            nombreTienda = 'Nombre de tienda no disponible';
-          }
-        });
-      } else {
-        _showMessage('Error: ${response.statusCode}');
-      }
-    } catch (e) {
-      _showMessage('Error de conexión: $e');
-    }
-  }
-
   Future<void> postData() async {
-    const String url = 'http://srveccqas1.corporativo.avantetextil.com.mx:8000/sap/bc/rest/zws_consultapro?sap-client=400';
+    const String url = 'https://10.1.2.34:51000/RESTAdapter/avantetextil/MOBILE/ConsultaProductos';
     
     // Crea el JSON que enviarás al servidor
     final Map<String, dynamic> jsonData = {
@@ -80,14 +46,16 @@ class MainScreenState extends State<MainScreen> {
     };
 
     // Autenticación básica (reemplaza con tus credenciales)
-    String username = 'WEBTNDA'; // Cambia esto por el usuario real
-    String password = '#20servic3OPMA'; // Cambia esto por la contraseña real
+    String username = 'andymobpo'; // Cambia esto por el usuario real
+    String password = 'droid24m0b1l'; // Cambia esto por la contraseña real
     String credentials = '$username:$password';
     String basicAuth = 'Basic ${base64Encode(credentials.codeUnits)}';
 
+    http.Client client = http.Client();
+
     // Realiza la solicitud POST
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse(url),
         headers: <String, String>{
           'Content-Type': 'application/json',
@@ -99,45 +67,50 @@ class MainScreenState extends State<MainScreen> {
       if (response.statusCode == 200) {
         // Solicitud exitosa
         var data = jsonDecode(response.body);
-        
-        setState(() {
-          // Verifica y asigna valores predeterminados si están vacíos
-          piso = data['piso']?.endsWith('-') == true ? data['piso']?.substring(0, data['piso'].length - 1) : data['piso'] ?? '';
-          bodega = data['bodega']?.endsWith('-') == true ? data['bodega']?.substring(0, data['bodega'].length - 1) : data['bodega'] ?? '';
-          transito = data['transito']?.endsWith('-') == true ? data['transito']?.substring(0, data['transito'].length - 1) : data['transito'] ?? '';
-          
-          // Asignación de precios
-          precioInicial = data['precIni'] ?? 0.0;
-          precioActual = data['precAct'] ?? 0.0;
-          
-          // Asignación de valores promocionales con valores predeterminados si están vacíos
-          precioPromo = data['calc']?.isEmpty ?? true ? '' : data['calc'] ?? '';
-          promoNombre = data['promName']?.isEmpty ?? true ? 'N/A' : data['promName'] ?? 'N/A';
-          promoDesc = data['promDesc']?.isEmpty ?? true ? 'N/A' : data['promDesc'] ?? 'N/A';
 
-          // Descripción y material con valores predeterminados si están vacíos
-          descripcion = data['desc'] ?? 'Descripción no disponible';
-          material = data['material'] ?? 'Material no disponible';
-          promo = data['promo']?.isEmpty ?? true ? 'No Hay' : data['promo'] ?? 'No Hay';
-        });
+        if (data['material'].isEmpty){
+          _showMessage('El codigo de barras no existe. Intenta con otro');
+        }
 
-        _navigateToResultScreen();
+        else {
+          setState(() {
+            // Verifica y asigna valores predeterminados si están vacíos
+            piso = (data['piso']?.isEmpty || data['piso']?.endsWith('-') == true)
+              ? (data['piso']?.endsWith('-') == true ? data['piso']!.substring(0, data['piso']!.length - 1) : '0.00')
+              : data['piso'];
+            bodega = (data['bodega']?.isEmpty || data['bodega']?.endsWith('-') == true)
+              ? (data['bodega']?.endsWith('-') == true ? data['bodega']!.substring(0, data['bodega']!.length - 1) : '0.00')
+              : data['bodega'];
+            transito = (data['transito']?.isEmpty || data['transito']?.endsWith('-') == true)
+              ? (data['transito']?.endsWith('-') == true ? data['transito']!.substring(0, data['transito']!.length - 1) : '0.00')
+              : data['transito'];
+            // Asignación de precios
+            precioInicial = data['precIni'] ?? 0.00;
+            precioActual = data['precAct'] ?? 0.00;
+            
+            // Asignación de valores promocionales con valores predeterminados si están vacíos
+            precioPromo = data['calc']?.isEmpty ?? true ? '' : data['calc'] ?? '';
+            promoNombre = data['promName']?.isEmpty ?? true ? 'N/A' : data['promName'] ?? 'N/A';
+            promoDesc = data['promDesc']?.isEmpty ?? true ? 'N/A' : data['promDesc'] ?? 'N/A';
+
+            // Descripción y material con valores predeterminados si están vacíos
+            descripcion = data['desc'] ?? 'Descripción no disponible';
+            material = data['material'] ?? 'Material no disponible';
+            promo = data['promo']?.isEmpty ?? true ? 'No Hay' : data['promo'] ?? 'No Hay';
+          });
+
+          _navigateToResultScreen();
+        }
       }    
       else {
-        var data = jsonDecode(response.body);
-        String comp = data['material']?.toString() ?? '';
-
-        if (comp.isEmpty) {
-          _showMessage('El código de barras no existe, intenta con otro');
-        }
-        else {
         // Maneja el error aquí
         _showMessage('Error en la solicitud: ${response.body}');
-        }
       }
     } catch (e) {
       // Maneja errores de conexión
       _showMessage('Error de conexión: $e');
+    } finally {
+      client.close();
     }
   }
 
@@ -233,8 +206,7 @@ class MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     usuario = widget.username;
-    contrasena = widget.password;
-    fetchStoreName(); // Llama a la función en el initState o en algún evento específico
+    contrasena = widget.password; // Llama a la función en el initState o en algún evento específico
   }
 
   
@@ -311,7 +283,7 @@ class MainScreenState extends State<MainScreen> {
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            nombreTienda,
+                            widget.nombreTienda,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,

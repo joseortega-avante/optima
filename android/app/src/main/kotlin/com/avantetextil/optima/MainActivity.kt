@@ -1,4 +1,4 @@
-package com.example.optima
+package com.avantetextil.optima
 
 import io.flutter.embedding.android.FlutterActivity
 

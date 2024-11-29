@@ -2,10 +2,10 @@
     <application
         android:usesCleartextTraffic="true"
         android:label="optima"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:name="com.avantetextil.optima"
+        android:icon="@mipmap/launcher_icon">
         <activity
-            android:name=".MainActivity"
+            android:name="com.avantetextil.optima.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

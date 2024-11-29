@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:hive/hive.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -17,7 +21,70 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool showLoginFields = false;
-  String? tiendaCodigo;
+  bool _obscurePassword = true;
+  String tiendaCodigo = '';
+  String nombreTienda = '';
+  String ipAddress = '';
+  String macAddress = '';
+  String deviceName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastUser();
+  }
+
+    Future<void> displayDeviceInfo() async {
+    ipAddress = await getIpAddress();
+    macAddress = await getMacAddress();
+    deviceName = await getDeviceName();
+
+    // Imprimir los datos en consola
+    debugPrint('Dirección IP: $ipAddress');
+    debugPrint('Dirección MAC: $macAddress');
+    debugPrint('Nombre del dispositivo: $deviceName');
+  }
+
+  Future<void> _loadLastUser() async {
+    var box = await Hive.openBox('userBox');
+    String? lastUser = box.get('lastUser');
+    if (lastUser != null) {
+      _userController.text = lastUser;
+    }
+  }
+
+  Future<void> _saveUser(String username) async {
+    var box = await Hive.openBox('userBox');
+    await box.put('lastUser', username);
+  }
+
+  Future<void> sendDeviceData(String username) async {
+    final url = Uri.parse('https://intranetcorporativo.avantetextil.com/Auth/registerDevice');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Cookie': 'ci_session=bae0ded296e633fbf6ccade6d81e2db5664f28ff',
+    };
+    final body = jsonEncode({
+      'ipAddress': ipAddress = await getIpAddress(),
+      'macAddress': macAddress = await getMacAddress(),
+      'deviceName': deviceName = await getDeviceName(),
+      'username': username
+    });
+    
+    debugPrint(body);
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+      if (response.statusCode == 200) {
+        debugPrint('Los datos se insertaron exitosamente');
+      } else {
+        debugPrint('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Excepción: $e');
+    }
+  }
+
 
   Future<void> _login() async {
     String username = _userController.text.trim();
@@ -28,32 +95,40 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       return;
     }
 
+    if (username.isNotEmpty) {
+      await _saveUser(username);
+    }
+
     var loginData = {
       "username": username,
       "password": password,
     };
 
+    http.Client client = http.Client();
+
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('https://intranetcorporativo.avantetextil.com/Auth/login'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(loginData),
       );
 
       if (response.statusCode == 200) {
+        displayDeviceInfo();
+        sendDeviceData(username);
         var data = jsonDecode(response.body);
         var nombre = data['nombre'];
         if (!data.containsKey('error')) {
           if (username.startsWith('osuc')) {
             tiendaCodigo = username.substring(4, 7);
-            print(tiendaCodigo);
             if (mounted) {
               Navigator.pushReplacement(
                 context, 
                 MaterialPageRoute(
                   builder: (context) => MainScreen(
                     nombre: nombre,
-                    tiendaCodigo: tiendaCodigo ?? '',
+                    nombreTienda: nombreTienda,
+                    tiendaCodigo: tiendaCodigo,
                     username: username,
                     password: password,
                   ),
@@ -72,6 +147,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     } catch (e) {
       _showMessage("Error: $e");
       _showMessage("Error de conexión. Intente nuevamente.");
+    } finally {
+      client.close();
     }
   }
 
@@ -106,21 +183,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                 int? tienda = int.tryParse(tiendaController.text);
                 if (tienda != null && tienda >= 001 && tienda <= 999) {
                   tiendaCodigo = tiendaController.text;
-                  if (mounted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MainScreen(
-                          nombre: nombre,
-                          tiendaCodigo: tiendaCodigo!,
-                          username: username,
-                          password: password,
-                        ),
-                      ),
-                    );
-                  } else {
-                    _showMessage("Número de tienda no válido. Intente nuevamente.");
-                  }
+                  fetchStoreName(username, password, nombre);
                 }
               },
             ),
@@ -130,6 +193,117 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
+    // Función para realizar el POST
+  Future<void> fetchStoreName(String username, String password, String nombre) async {
+    final url = 'https://intranetcorporativo.avantetextil.com/Store/store_name/osuc$tiendaCodigo';
+
+    http.Client client = http.Client();
+
+    try {
+      final response = await client.post(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        // Obtiene la respuesta como JSON
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        if (data['displayname'] == 'Generico') {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Error'),
+                  content: const Text('Número de tienda no existe. Intenta de nuevo.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Aceptar'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+          return;
+        }
+
+        setState(() {
+          if (data.containsKey('displayname') && data['displayname'] is String) {
+            String displayName = data['displayname'];
+            
+            // Verifica si termina en un número de tres dígitos
+            final regex = RegExp(r'\d{3}$');
+            if (regex.hasMatch(displayName)) {
+              nombreTienda = displayName.substring(0, displayName.length - 3); // Elimina los últimos tres caracteres
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MainScreen(
+                      nombre: nombre,
+                      nombreTienda: nombreTienda,
+                      tiendaCodigo: tiendaCodigo,
+                      username: username,
+                      password: password,
+                    ),
+                  ),
+                );
+              } 
+            } else {
+              nombreTienda = displayName; // Almacena el nombre sin cambios
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MainScreen(
+                      nombre: nombre,
+                      nombreTienda: nombreTienda,
+                      tiendaCodigo: tiendaCodigo,
+                      username: username,
+                      password: password,
+                    ),
+                  ),
+                );
+              }
+            }
+          } else {
+            _showMessage('Nombre de tienda no existe');
+          }
+        });
+      } else {
+        _showMessage('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showMessage('Error de conexión: $e');
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<String> getIpAddress() async {
+    final info = NetworkInfo();
+    return await info.getWifiIP() ?? 'No disponible';
+  }
+
+  Future<String> getMacAddress() async {
+    final info = NetworkInfo();
+    return await info.getWifiBSSID() ?? 'No disponible';
+  }
+
+  Future<String> getDeviceName() async {
+    final deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      return androidInfo.model;
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      return iosInfo.utsname.machine;
+    }
+    return 'No disponible';
+  }
+  
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -139,6 +313,12 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   void toggleLoginFields() {
     setState(() {
       showLoginFields = !showLoginFields;
+    });
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscurePassword = !_obscurePassword;
     });
   }
 
@@ -222,59 +402,87 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                       // Campo de usuario
                       Container(
                         margin: EdgeInsets.symmetric(horizontal: 100.w),
-                        //padding: EdgeInsets.symmetric(horizontal: 10.w),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10.r),
                         ),
-                        child: SizedBox(
-                          height: 28.h,
-                          child: TextField(
-                            controller: _userController,
-                            textAlign: TextAlign.center,
-                            textAlignVertical: TextAlignVertical.center,
-                            decoration: InputDecoration(
-                              hintText: 'Usuario',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade500,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 30.h,
+                                child: TextField(
+                                  controller: _userController,
+                                  textAlign: TextAlign.center,
+                                  textAlignVertical: TextAlignVertical.center,
+                                  decoration: InputDecoration(
+                                    hintText: 'Usuario',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.only(bottom: 12.5.h, left: 15.w),
+                                  ),
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
                               ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.only(bottom: 11.5.h),
                             ),
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 13.sp,
+                            Padding(
+                              padding: EdgeInsets.only(left: 0.w, right: 14),
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.grey.shade500,
+                                size: 15.h, // Tamaño ajustado del icono
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       Container(
                         margin: EdgeInsets.symmetric(horizontal: 100.w, vertical: 10.h),
+                        padding: EdgeInsets.only(left: 30.w),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: SizedBox (
-                          height: 28.h,
-                          child: TextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            textAlign: TextAlign.center,
-                            textAlignVertical: TextAlignVertical.center,
-                            decoration: InputDecoration(
-                              hintText: 'Contraseña',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade500,
+                          height: 30.h,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  textAlign: TextAlign.center,
+                                  textAlignVertical: TextAlignVertical.center,
+                                  decoration: InputDecoration(
+                                    hintText: 'Contraseña',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.only(bottom: 13.h),
+                                  ),
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 10.5.sp,
+                                  ),
+                                ),
                               ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 8.5.h),
-                            ),
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 13.sp,
-                            ),
+                              IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.grey,
+                                  size: 15.h, // Tamaño ajustado
+                                ),
+                                onPressed: _togglePasswordVisibility,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -317,7 +525,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                 Padding(
                   padding: EdgeInsets.only(bottom: 30.h),
                   child: Text(
-                    '2 . 0 . 1',
+                    '1 . 0 . 0',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 16.sp,

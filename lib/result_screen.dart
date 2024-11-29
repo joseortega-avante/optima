@@ -4,8 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class ResultScreen extends StatefulWidget {
   final String barcodeValue;
   final String descripcion;
-  final double precioInicial;
-  final double precioActual;
+  final String precioInicial;
+  final String precioActual;
   final String precioPromo;
   final String material;
   final String piso;
@@ -49,15 +49,15 @@ class ResultScreenState extends State<ResultScreen> {
     double tr = double.parse(widget.transito);
 
     return Scaffold(
-      appBar: AppBar(
+      /*appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.grey.shade700,
         centerTitle: true,
         title: Image.asset(
           'assets/images/logo_content.png',
-          height: 40.h,
+          height: 20.h,
         ),
-      ),
+      ),*/
       body: Stack(
         children: [
           Image.asset(
@@ -71,7 +71,7 @@ class ResultScreenState extends State<ResultScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: Column(
                 children: [
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 90.h),
                   _buildDataRow(),
                   SizedBox(height: 20.h),
                   _buildUPCCode(),
@@ -135,6 +135,7 @@ class ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildInventorySection(double ps, double bd, double tr) {
+
     int pisoRed = ps.ceil();
     int bodegaRed = bd.ceil();
     int transRed = tr.ceil();
@@ -176,9 +177,9 @@ class ResultScreenState extends State<ResultScreen> {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildPriceBox('Precio Inicial', inicial, Colors.white),
+          _buildPriceBox('Precio Inicial', '\$$inicial', Colors.white),
           SizedBox(width: 20.w), // Espacio entre los precios
-          _buildPriceBox('Precio Actual', actual, Colors.white),
+          _buildPriceBox('Precio Actual', '\$$actual', Colors.white),
         ],
       );
     }
@@ -188,9 +189,9 @@ class ResultScreenState extends State<ResultScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildPriceBox('Precio Inicial', inicial, Colors.white),
-        _buildPriceBox('Precio Actual', actual, Colors.white),
-        _buildPriceBox('Precio Promo', ppromo, Colors.red),
+        _buildPriceBox('Precio Inicial', '\$$inicial', Colors.white),
+        _buildPriceBox('Precio Actual', '\$$actual', Colors.white),
+        _buildPriceBox('Precio Promo', '\$$ppromo', Colors.red),
       ],
     );
   }
