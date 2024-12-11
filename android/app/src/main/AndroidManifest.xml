@@ -2,7 +2,6 @@
     <application
         android:usesCleartextTraffic="true"
         android:label="optima"
-        android:name="com.avantetextil.optima"
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name="com.avantetextil.optima.MainActivity"

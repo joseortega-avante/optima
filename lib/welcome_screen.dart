@@ -34,7 +34,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     _loadLastUser();
   }
 
-    Future<void> displayDeviceInfo() async {
+  Future<void> displayDeviceInfo() async {
     ipAddress = await getIpAddress();
     macAddress = await getMacAddress();
     deviceName = await getDeviceName();
@@ -114,11 +114,11 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       );
 
       if (response.statusCode == 200) {
-        displayDeviceInfo();
-        sendDeviceData(username);
         var data = jsonDecode(response.body);
         var nombre = data['nombre'];
         if (!data.containsKey('error')) {
+          displayDeviceInfo();
+          sendDeviceData(username);
           if (username.startsWith('osuc')) {
             tiendaCodigo = username.substring(4, 7);
             if (mounted) {
@@ -288,8 +288,18 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   Future<String> getMacAddress() async {
+    final deviceInfo = DeviceInfoPlugin();
     final info = NetworkInfo();
-    return await info.getWifiBSSID() ?? 'No disponible';
+
+    if (Platform.isAndroid) {
+      // Obtener la dirección MAC en Android
+      return await info.getWifiBSSID() ?? 'No disponible';
+    } else if (Platform.isIOS) {
+      // Obtener el UUID en iOS
+      final iosInfo = await deviceInfo.iosInfo;
+      return iosInfo.identifierForVendor ?? 'No disponible';
+    }
+    return 'No disponible';
   }
 
   Future<String> getDeviceName() async {
@@ -342,7 +352,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
               children: <Widget>[
                 // Logo
                 Container(
-                  margin: EdgeInsets.only(top: 90.h),
+                  margin: EdgeInsets.only(top: 100.h),
                   child: Image.asset(
                     'assets/images/logo_content.png',
                     width: 150.w, // Ancho adaptable

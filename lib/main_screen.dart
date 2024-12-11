@@ -35,9 +35,10 @@ class MainScreenState extends State<MainScreen> {
   String promoDesc = '';
   String usuario = '';
   String contrasena = '';
+  bool _isProcessing = false;
 
   Future<void> postData() async {
-    const String url = 'https://10.1.2.34:51000/RESTAdapter/avantetextil/MOBILE/ConsultaProductos';
+    const String url = 'https://187.217.184.85:51000/RESTAdapter/avantetextil/MOBILE/ConsultaProductos';
     
     // Crea el JSON que enviarás al servidor
     final Map<String, dynamic> jsonData = {
@@ -46,20 +47,19 @@ class MainScreenState extends State<MainScreen> {
     };
 
     // Autenticación básica (reemplaza con tus credenciales)
-    String username = 'andymobpo'; // Cambia esto por el usuario real
-    String password = 'droid24m0b1l'; // Cambia esto por la contraseña real
+    String username = 'andymob'; // Cambia esto por el usuario real
+    String password = '¡R3stM0b#'; // Cambia esto por la contraseña real
     String credentials = '$username:$password';
     String basicAuth = 'Basic ${base64Encode(credentials.codeUnits)}';
 
-    http.Client client = http.Client();
-
     // Realiza la solicitud POST
     try {
-      final response = await client.post(
+      final response = await http.post(
         Uri.parse(url),
         headers: <String, String>{
           'Content-Type': 'application/json',
           'Authorization': basicAuth,
+          'Connection': 'close',
         },
         body: jsonEncode(jsonData),
       );
@@ -109,8 +109,6 @@ class MainScreenState extends State<MainScreen> {
     } catch (e) {
       // Maneja errores de conexión
       _showMessage('Error de conexión: $e');
-    } finally {
-      client.close();
     }
   }
 
@@ -132,19 +130,51 @@ class MainScreenState extends State<MainScreen> {
             ),
           ),
           body: MobileScanner(
-            onDetect: (barcodeCapture) {
+            onDetect: (barcodeCapture) async {
+              if (_isProcessing) return; // Evitar múltiples detecciones
+              _isProcessing = true;
+
               final List<Barcode> barcodes = barcodeCapture.barcodes;
-              setState(() {
-                codigo = barcodes.first.rawValue ?? 'Código no detectado';
-              });
-              Navigator.pop(context); // Cierra el escáner después de detectar un código
-              postData();
+              final rawValue = barcodes.first.rawValue ?? '';
+
+              if (rawValue.isNotEmpty && rawValue.length >= 5) {
+                if (mounted) {
+                  setState(() {
+                    codigo = rawValue; // Asignar el código escaneado
+                  });
+                }
+                Navigator.pop(context); // Cierra el escáner después del código
+
+                try {
+                  await postData(); // Llamada al servicio
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error al enviar los datos')),
+                    );
+                  }
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isProcessing = false; // Desbloquear el escáner
+                    });
+                  }
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Código inválido o no detectado')),
+                  );
+                }
+                _isProcessing = false;
+              }
             },
           ),
         ),
       ),
     );
   }
+
 
   void _showDialogCode() {
     TextEditingController codigoController = TextEditingController();
@@ -207,6 +237,12 @@ class MainScreenState extends State<MainScreen> {
     super.initState();
     usuario = widget.username;
     contrasena = widget.password; // Llama a la función en el initState o en algún evento específico
+  }
+
+  @override
+  void dispose() {
+    _isProcessing = false; // Reinicia el estado de procesamiento
+    super.dispose();
   }
 
   
